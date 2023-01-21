@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 
 public class Enemy : MonoBehaviour
 {
@@ -9,19 +10,38 @@ public class Enemy : MonoBehaviour
 
     bool movingLeft;
 
-    private void Start ()
+    [SerializeField] GameObject BulletPrefab;
+    [SerializeField] float BulletDelay;
+    [SerializeField] uint Health;
+    
+    private float BulletTimeEllapse;
+
+    private void Start()
     {
         // Randomly start moving either left or right
         movingLeft = Random.Range (0.0f, 1.0f) < 0.5f;
     }
 
-    private void Update ()
+    private void Update()
     {
         if (transform.position.y > TargetY)
         {
             // Enemy starts offscreen, so move down until it's in the right place
             transform.position -= Vector3.up * Time.deltaTime * MoveSpeed;
+
+            BulletTimeEllapse = 0.0f;
             return;
+        }
+        else
+        {
+            BulletTimeEllapse += Time.deltaTime;
+
+            if (BulletTimeEllapse >= BulletDelay)
+            {
+                Vector3 position = new Vector3(transform.position.x, transform.position.y - 0.2f, 0.0f);
+                Instantiate(BulletPrefab, position, Quaternion.identity);
+                BulletTimeEllapse = 0.0f;
+            }
         }
 
         // Move
@@ -33,5 +53,30 @@ public class Enemy : MonoBehaviour
         {
             movingLeft = !movingLeft;
         }
+    }
+
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        if (other.tag == "Player Bullet")
+        {
+            Debug.Log("Enemy Hit");
+            Health -= 1;
+            if (0 == Health)
+            {
+                Debug.Log("Enemy Dead");
+                Destroy(gameObject);
+                return;
+            }
+
+            IEnumerator coroutine = Hit();
+            StartCoroutine(coroutine);
+        }
+    }
+
+    private IEnumerator Hit()
+    {
+        gameObject.GetComponent<Renderer>().material.color = new Color32(243, 107, 107, 255);
+        yield return new WaitForSeconds(1);
+        gameObject.GetComponent<Renderer>().material.color = new Color32(255, 255, 255, 255);
     }
 }
